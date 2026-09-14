@@ -32,6 +32,25 @@ fi
 # DO NOT MODIFY THE ABOVE ##########################################################
 ####################################################################################
 
-# Start HDFS/Spark main here
+# Format only a new NameNode; restarting must retain the namespace.
+set -euo pipefail
+mkdir -p /var/lib/hadoop/hdfs/namenode /var/lib/hadoop/hdfs/datanode \
+    /var/log/hadoop /var/run/hadoop
+if [ ! -f /var/lib/hadoop/hdfs/namenode/current/VERSION ]; then
+    hdfs namenode -format -nonInteractive
+fi
+hdfs --daemon start namenode
 
-bash
+# Wait for the NameNode RPC service before starting the local DataNode.
+deadline=$((SECONDS + 60))
+until hdfs dfsadmin -safemode get; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+        echo "NameNode did not become ready; see /var/log/hadoop." >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+# Each container owns its DataNode, so workers can restart independently.
+# Run it in the foreground to keep the container alive and receive stop signals.
+exec hdfs datanode

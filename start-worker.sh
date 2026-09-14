@@ -16,6 +16,9 @@ fi
 # DO NOT MODIFY THE ABOVE ##########################################################
 ####################################################################################
 
-# Start HDFS/Spark worker here
+set -euo pipefail
+mkdir -p /var/lib/hadoop/hdfs/datanode /var/log/hadoop /var/run/hadoop
 
-bash
+# The DataNode retries connecting if main is still starting. Foreground execution
+# keeps the container alive and allows Docker to stop the service cleanly.
+exec hdfs datanode

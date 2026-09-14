@@ -33,5 +33,18 @@ fi
 ####################################################################################
 
 # Start HDFS/Spark main here
+export JAVA_HOME=/opt/java/openjdk
+export HADOOP_HOME=/opt/hadoop
+export SPARK_HOME=/opt/spark
+export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
+
+mkdir -p /tmp/hdfs/namenode /tmp/hdfs/datanode
+if [ ! -d /tmp/hdfs/namenode/current ]; then
+    hdfs namenode -format -force >/dev/null 2>&1 || exit 1
+fi
+hdfs --daemon start namenode
+hdfs --daemon start datanode
+$SPARK_HOME/sbin/start-master.sh
+$SPARK_HOME/sbin/start-slave.sh spark://main:7077
 
 bash

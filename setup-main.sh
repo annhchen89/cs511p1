@@ -1,5 +1,8 @@
 #!/bin/bash
 export JAVA_HOME=/opt/java/openjdk
+export HADOOP_HOME=/opt/hadoop
+export SPARK_HOME=/opt/spark
+export PATH="$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 
 ####################################################################################
 # DO NOT MODIFY THE BELOW ##########################################################
@@ -12,3 +15,69 @@ chmod 0600 ~/.ssh/authorized_keys
 ####################################################################################
 
 # Setup HDFS/Spark main here
+mkdir -p "$HADOOP_HOME/etc/hadoop"
+cat > "$HADOOP_HOME/etc/hadoop/core-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://main:9000</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/tmp/hadoop</value>
+    </property>
+</configuration>
+EOF
+
+cat > "$HADOOP_HOME/etc/hadoop/hdfs-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>3</value>
+    </property>
+    <property>
+        <name>dfs.permissions</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/tmp/hdfs/namenode</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/tmp/hdfs/datanode</value>
+    </property>
+    <property>
+        <name>dfs.namenode.rpc-address</name>
+        <value>main:9000</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address</name>
+        <value>main:9870</value>
+    </property>
+    <property>
+        <name>dfs.namenode.datanode.registration.ip-hostname-check</name>
+        <value>false</value>
+    </property>
+</configuration>
+EOF
+
+cat > "$HADOOP_HOME/etc/hadoop/workers" <<'EOF'
+worker1
+worker2
+EOF
+
+mkdir -p "$SPARK_HOME/conf"
+cat > "$SPARK_HOME/conf/spark-env.sh" <<'EOF'
+export SPARK_MASTER_HOST=main
+export SPARK_MASTER_PORT=7077
+export SPARK_LOCAL_IP=main
+export SPARK_WORKER_CORES=1
+export SPARK_WORKER_MEMORY=1g
+export SPARK_PUBLIC_DNS=main
+EOF
+
+cat > "$SPARK_HOME/conf/workers" <<'EOF'
+worker1
+worker2
+EOF

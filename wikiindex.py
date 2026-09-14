@@ -47,8 +47,17 @@ def parse_article(line):
     lines (such as the trailing "not-json" line of the sample) are dropped
     instead of failing the job.
     """
-    # TODO: implement.
-    raise NotImplementedError("parse_article")
+    try:
+        article = json.loads(line)
+    except ValueError:
+        return None
+    if not isinstance(article, dict):
+        return None
+    article_id = article.get("id")
+    text = article.get("text")
+    if not isinstance(article_id, int) or not isinstance(text, str):
+        return None
+    return article_id, text
 
 
 def tokenize(text):
@@ -58,8 +67,8 @@ def tokenize(text):
     of TOKEN_PATTERN, drop tokens shorter than MIN_TOKEN_LENGTH, drop
     STOPWORDS. Repeated words are kept: the caller counts them.
     """
-    # TODO: implement.
-    raise NotImplementedError("tokenize")
+    tokens = TOKEN_PATTERN.findall(text.lower())
+    return [t for t in tokens if len(t) >= MIN_TOKEN_LENGTH and t not in STOPWORDS]
 
 
 def build_index(lines):
@@ -68,9 +77,12 @@ def build_index(lines):
     `postings` is an iterable of (article_id, tf) pairs, one per article that
     contains the word; their order does not matter, format_record sorts them.
     """
-    # TODO: parse the lines, tokenize the text, count each (word, article_id)
-    # pair, then group the counts by word.
-    raise NotImplementedError("build_index")
+    articles = lines.map(parse_article).filter(lambda article: article is not None)
+    pairs = articles.flatMap(
+        lambda article: [((word, article[0]), 1) for word in tokenize(article[1])]
+    )
+    counts = pairs.reduceByKey(lambda a, b: a + b)
+    return counts.map(lambda kv: (kv[0][0], (kv[0][1], kv[1]))).groupByKey()
 
 
 def format_record(word, postings):
